@@ -4,4 +4,4 @@
 
 react + vite + threejs
 
-给朋友做着玩的..
+给朋友做着玩的...
