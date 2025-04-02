@@ -19,7 +19,7 @@ body {
 
 .toolbar {
   width: 280px;
-  padding: 24px;
+  padding: 10px 24px;
   background-color: #2d2d2d;
   border-right: 1px solid #3d3d3d;
   color: #ffffff;
@@ -89,4 +89,64 @@ body {
 .canvas-container {
   flex: 1;
   background-color: #1a1a1a;
+}
+
+.movement-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin: 10px 0;
+}
+
+.movement-controls button {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #4a90e2;
+  background-color: #2c3e50;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.movement-controls button:hover {
+  background-color: #4a90e2;
+}
+
+.movement-controls button:active {
+  transform: scale(0.95);
+}
+
+.position-display {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+
+.position-display span {
+  background-color: #2c3e50;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #4a90e2;
+}
+
+.fit-status {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.can-fit {
+  background-color: #4caf50;
+  color: white;
+}
+
+.cannot-fit {
+  background-color: #f44336;
+  color: white;
 }
