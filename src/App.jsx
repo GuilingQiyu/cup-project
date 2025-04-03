@@ -1,10 +1,11 @@
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { useSpring, animated } from "@react-spring/three";
+import * as THREE from "three";
 import "./App.css";
 
-function Cup({ position, rotation = 0 }) {
+function Cup({ position, rotation = 0, cupRef }) {
   // 创建杯子材质
   const cupMaterial = (
     <meshStandardMaterial
@@ -16,7 +17,7 @@ function Cup({ position, rotation = 0 }) {
   );
 
   return (
-    <group position={position} rotation={[0, rotation, 0]}>
+    <group position={position} rotation={[0, rotation, 0]} ref={cupRef}>
       {/* 杯子主体 - 圆柱体 */}
       <mesh position={[0, 4.75, 0]}>
         <cylinderGeometry args={[4, 4, 9.5, 32]} />
@@ -133,6 +134,7 @@ function AnimatedScene({
   boxHeight,
   boxDepth,
   isOverlapping,
+  cupRef,
 }) {
   const { position: cupSpringPosition } = useSpring({
     position: isOverlapping ? cupPosition : cupPosition,
@@ -148,7 +150,7 @@ function AnimatedScene({
     <>
       <animated.group position={cupSpringPosition}>
         <Suspense fallback={null}>
-          <Cup position={[0, 0, 0]} rotation={cupRotation} />
+          <Cup position={[0, 0, 0]} rotation={cupRotation} cupRef={cupRef} />
         </Suspense>
       </animated.group>
       <animated.group position={boxPosition}>
@@ -171,45 +173,90 @@ function App() {
   const [boxDepth, setBoxDepth] = useState(15); // 默认15cm
   const [isOverlapping, setIsOverlapping] = useState(false);
   const [canFit, setCanFit] = useState(false);
+  const cupRef = useRef();
 
   // 检测杯子是否能放入盒子
   const checkIfCupCanFit = () => {
-    if (!isOverlapping) {
+    if (!isOverlapping || !cupRef.current) {
       setCanFit(false);
       return;
     }
 
-    // 杯子主体半径（包括把手）
-    const cupRadius = 4.5; // 把手外半径
-    const cupHeight = 9.5; // 杯子高度
-
     // 检查高度是否足够
+    const cupHeight = 9.5; // 杯子高度
     if (cupHeight > boxHeight) {
       setCanFit(false);
       return;
     }
 
-    // 计算杯子在水平面上的投影范围
-    const [x, y, z] = cupPosition;
+    // 获取杯子的所有点坐标
+    const cupPoints = [];
 
-    // 计算把手旋转后的投影
-    const handleAngle = cupRotation;
-    const handleProjection = {
-      x: x + 4.25 * Math.cos(handleAngle), // 把手中心点
-      z: z + 4.25 * Math.sin(handleAngle),
-    };
+    // 遍历杯子的所有子对象
+    cupRef.current.traverse((child) => {
+      if (child.isMesh) {
+        // 获取几何体
+        const geometry = child.geometry;
 
-    // 检查杯子主体是否在盒子内
-    const isBodyInBox =
-      Math.abs(x) + cupRadius <= boxWidth / 2 &&
-      Math.abs(z) + cupRadius <= boxDepth / 2;
+        // 确保几何体有顶点
+        if (geometry.attributes.position) {
+          // 获取顶点数量
+          const vertexCount = geometry.attributes.position.count;
 
-    // 检查把手是否在盒子内
-    const isHandleInBox =
-      Math.abs(handleProjection.x) + 0.5 <= boxWidth / 2 &&
-      Math.abs(handleProjection.z) + 0.5 <= boxDepth / 2;
+          // 遍历所有顶点
+          for (let i = 0; i < vertexCount; i++) {
+            // 获取顶点坐标
+            const x = geometry.attributes.position.getX(i);
+            const y = geometry.attributes.position.getY(i);
+            const z = geometry.attributes.position.getZ(i);
 
-    setCanFit(isBodyInBox && isHandleInBox);
+            // 创建顶点向量
+            const vertex = new THREE.Vector3(x, y, z);
+
+            // 将顶点从局部坐标转换为世界坐标
+            child.localToWorld(vertex);
+
+            // 添加到点集合
+            cupPoints.push(vertex);
+          }
+        }
+      }
+    });
+
+    // 如果没有任何点，则无法判断
+    if (cupPoints.length === 0) {
+      setCanFit(false);
+      return;
+    }
+
+    // 定义盒子的边界（只考虑水平方向）
+    const boxMinX = -boxWidth / 2;
+    const boxMaxX = boxWidth / 2;
+    const boxMinZ = -boxDepth / 2;
+    const boxMaxZ = boxDepth / 2;
+
+    // 检查所有点是否都在盒子边界内
+    const allPointsInBox = cupPoints.every((point) => {
+      return (
+        point.x >= boxMinX &&
+        point.x <= boxMaxX &&
+        point.z >= boxMinZ &&
+        point.z <= boxMaxZ
+      );
+    });
+
+    // 添加安全边距
+    const safetyMargin = 0.1; // 安全边距（厘米）
+    const hasSafetyMargin = cupPoints.every((point) => {
+      return (
+        point.x >= boxMinX + safetyMargin &&
+        point.x <= boxMaxX - safetyMargin &&
+        point.z >= boxMinZ + safetyMargin &&
+        point.z <= boxMaxZ - safetyMargin
+      );
+    });
+
+    setCanFit(allPointsInBox && hasSafetyMargin);
   };
 
   // 在相关状态变化时触发检测
@@ -377,6 +424,7 @@ function App() {
             boxHeight={boxHeight}
             boxDepth={boxDepth}
             isOverlapping={isOverlapping}
+            cupRef={cupRef}
           />
 
           <OrbitControls />
