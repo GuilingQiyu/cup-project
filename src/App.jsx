@@ -58,31 +58,38 @@ function OpenBox({ width, height, depth, position }) {
   return (
     <group position={position} castShadow receiveShadow>
       {/* 底面 */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh
+        position={[width / 2, 0, depth / 2]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
         <planeGeometry args={[width, depth]} />
         {outerMaterial}
       </mesh>
-      {/* 前面 */}
-      <mesh position={[0, height / 2, -depth / 2]}>
+
+      {/* 前面 - 基准面，不移动 */}
+      <mesh position={[width / 2, height / 2, 0]}>
         <planeGeometry args={[width, height]} />
         {outerMaterial}
       </mesh>
-      {/* 后面 */}
-      <mesh position={[0, height / 2, depth / 2]}>
+
+      {/* 后面 - 移动 */}
+      <mesh position={[width / 2, height / 2, depth]}>
         <planeGeometry args={[width, height]} />
         {outerMaterial}
       </mesh>
-      {/* 左面 */}
+
+      {/* 左面 - 基准面，不移动 */}
       <mesh
-        position={[-width / 2, height / 2, 0]}
+        position={[0, height / 2, depth / 2]}
         rotation={[0, Math.PI / 2, 0]}
       >
         <planeGeometry args={[depth, height]} />
         {outerMaterial}
       </mesh>
-      {/* 右面 */}
+
+      {/* 右面 - 移动 */}
       <mesh
-        position={[width / 2, height / 2, 0]}
+        position={[width, height / 2, depth / 2]}
         rotation={[0, Math.PI / 2, 0]}
       >
         <planeGeometry args={[depth, height]} />
@@ -92,31 +99,38 @@ function OpenBox({ width, height, depth, position }) {
       {/* 内部面 */}
       <group position={[0, 0, 0]}>
         {/* 内部底面 */}
-        <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh
+          position={[width / 2, 0.01, depth / 2]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
           <planeGeometry args={[width - 0.02, depth - 0.02]} />
           {innerMaterial}
         </mesh>
-        {/* 内部前面 */}
-        <mesh position={[0, height / 2, -depth / 2 + 0.01]}>
+
+        {/* 内部前面 - 基准面，不移动 */}
+        <mesh position={[width / 2, height / 2, 0.01]}>
           <planeGeometry args={[width - 0.02, height - 0.02]} />
           {innerMaterial}
         </mesh>
-        {/* 内部后面 */}
-        <mesh position={[0, height / 2, depth / 2 - 0.01]}>
+
+        {/* 内部后面 - 移动 */}
+        <mesh position={[width / 2, height / 2, depth - 0.01]}>
           <planeGeometry args={[width - 0.02, height - 0.02]} />
           {innerMaterial}
         </mesh>
-        {/* 内部左面 */}
+
+        {/* 内部左面 - 基准面，不移动 */}
         <mesh
-          position={[-width / 2 + 0.01, height / 2, 0]}
+          position={[0.01, height / 2, depth / 2]}
           rotation={[0, Math.PI / 2, 0]}
         >
           <planeGeometry args={[depth - 0.02, height - 0.02]} />
           {innerMaterial}
         </mesh>
-        {/* 内部右面 */}
+
+        {/* 内部右面 - 移动 */}
         <mesh
-          position={[width / 2 - 0.01, height / 2, 0]}
+          position={[width - 0.01, height / 2, depth / 2]}
           rotation={[0, Math.PI / 2, 0]}
         >
           <planeGeometry args={[depth - 0.02, height - 0.02]} />
@@ -174,23 +188,14 @@ function App() {
   const [isOverlapping, setIsOverlapping] = useState(false);
   const [canFit, setCanFit] = useState(false);
   const cupRef = useRef();
+  const [cupPoints, setCupPoints] = useState([]); // 存储杯子的点坐标
+  const [lastCheckTime, setLastCheckTime] = useState(0); // 记录上次检查时间
 
-  // 检测杯子是否能放入盒子
-  const checkIfCupCanFit = () => {
-    if (!isOverlapping || !cupRef.current) {
-      setCanFit(false);
-      return;
-    }
+  // 更新杯子的点坐标
+  const updateCupPoints = () => {
+    if (!cupRef.current) return;
 
-    // 检查高度是否足够
-    const cupHeight = 9.5; // 杯子高度
-    if (cupHeight > boxHeight) {
-      setCanFit(false);
-      return;
-    }
-
-    // 获取杯子的所有点坐标
-    const cupPoints = [];
+    const points = [];
 
     // 遍历杯子的所有子对象
     cupRef.current.traverse((child) => {
@@ -217,23 +222,38 @@ function App() {
             child.localToWorld(vertex);
 
             // 添加到点集合
-            cupPoints.push(vertex);
+            points.push(vertex);
           }
         }
       }
     });
 
-    // 如果没有任何点，则无法判断
-    if (cupPoints.length === 0) {
+    // 确保点坐标集合不为空
+    if (points.length > 0) {
+      setCupPoints(points);
+    }
+  };
+
+  // 检测杯子是否能放入盒子
+  const checkIfCupCanFit = () => {
+    if (!isOverlapping || cupPoints.length === 0) {
+      setCanFit(false);
+      return;
+    }
+
+    // 检查高度是否足够
+    const cupHeight = 9.5; // 杯子高度
+    if (cupHeight > boxHeight) {
       setCanFit(false);
       return;
     }
 
     // 定义盒子的边界（只考虑水平方向）
-    const boxMinX = -boxWidth / 2;
-    const boxMaxX = boxWidth / 2;
-    const boxMinZ = -boxDepth / 2;
-    const boxMaxZ = boxDepth / 2;
+    // 由于左面和前面是基准面，所以边界从0开始
+    const boxMinX = 0;
+    const boxMaxX = boxWidth;
+    const boxMinZ = 0;
+    const boxMaxZ = boxDepth;
 
     // 检查所有点是否都在盒子边界内
     const allPointsInBox = cupPoints.every((point) => {
@@ -256,13 +276,34 @@ function App() {
       );
     });
 
+    // 记录当前检查时间
+    const currentTime = Date.now();
+
+    // 如果距离上次检查时间太短（小于100ms），则忽略此次检查
+    // 这可以防止在快速调整时出现判断不一致的情况
+    if (currentTime - lastCheckTime < 100) {
+      return;
+    }
+
+    setLastCheckTime(currentTime);
     setCanFit(allPointsInBox && hasSafetyMargin);
   };
 
   // 在相关状态变化时触发检测
   useEffect(() => {
-    checkIfCupCanFit();
-  }, [cupPosition, cupRotation, boxWidth, boxHeight, boxDepth, isOverlapping]);
+    // 更新杯子的点坐标
+    updateCupPoints();
+  }, [cupPosition, cupRotation]);
+
+  // 在点坐标或盒子尺寸变化时检查容纳情况
+  useEffect(() => {
+    // 添加一个小延迟，确保点坐标已更新
+    const timer = setTimeout(() => {
+      checkIfCupCanFit();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [cupPoints, boxWidth, boxHeight, boxDepth, isOverlapping]);
 
   const handleCheckFit = () => {
     if (!isOverlapping) {
@@ -275,13 +316,8 @@ function App() {
     setIsOverlapping(!isOverlapping);
   };
 
-  const handleRotate45 = () => {
-    setCupRotation((prev) => (prev + Math.PI / 4) % (2 * Math.PI));
-  };
-
   const handleMoveCup = (direction, value) => {
     const [x, y, z] = cupPosition;
-    const step = 0.5; // 移动步长，单位厘米
 
     switch (direction) {
       case "horizontal":
@@ -289,9 +325,6 @@ function App() {
         break;
       case "vertical":
         setCupPosition([x, y, value]);
-        break;
-      case "diagonal":
-        setCupPosition([value, y, value]);
         break;
       default:
         break;
@@ -312,7 +345,6 @@ function App() {
             }
             step="1"
           />
-          <button onClick={handleRotate45}>旋转45度</button>
         </div>
 
         {isOverlapping && (
@@ -335,17 +367,6 @@ function App() {
               value={cupPosition[2].toFixed(2)}
               onChange={(e) =>
                 handleMoveCup("vertical", Number(e.target.value))
-              }
-              step="0.1"
-              min="-10"
-              max="10"
-            />
-            <label>对角线移动：</label>
-            <input
-              type="number"
-              value={cupPosition[0].toFixed(2)}
-              onChange={(e) =>
-                handleMoveCup("diagonal", Number(e.target.value))
               }
               step="0.1"
               min="-10"
