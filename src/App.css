@@ -20,8 +20,6 @@ body {
 .toolbar {
   width: 280px;
   padding: 0 20px;
-  /* background-color: #2c3e50; */
-  /* border-right: 1px solid #34495e; */
   color: #ffffff;
   overflow-y: auto;
   height: 100vh;
@@ -155,4 +153,44 @@ body {
 .cannot-fit {
   background-color: #f44336;
   color: white;
+}
+
+.info-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+.info-icon {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.info-tooltip {
+  opacity: 0;
+  visibility: hidden;
+  width: 400px;
+  position: absolute;
+  top: 0;
+  right: 50px;
+  background-color: #333;
+  text-align: center;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 4px;
+  z-index: 20;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.info-tooltip p {
+  margin: 8px;
+}
+
+.info-button:hover .info-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
