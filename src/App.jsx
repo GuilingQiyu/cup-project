@@ -6,6 +6,17 @@ import * as THREE from "three";
 import "./App.css";
 
 function Cup({ position, rotation = 0, cupRef }) {
+  // 杯子参数
+  const cupHeight = 9.5; // 杯子高度
+  const cupRadius = 4; // 杯子半径
+
+  // const handleRadius = 4.25; // 把手环半径
+  const handleRadius = 3; // 把手环半径
+
+  const handleThickness = 0.5; // 把手粗细
+  const handleDistance = 4; // 把手到杯子中心的距离
+  const handleHeight = 5; // 把手在垂直方向的位置
+
   // 创建杯子材质
   const cupMaterial = (
     <meshStandardMaterial
@@ -19,14 +30,19 @@ function Cup({ position, rotation = 0, cupRef }) {
   return (
     <group position={position} rotation={[0, rotation, 0]} ref={cupRef}>
       {/* 杯子主体 - 圆柱体 */}
-      <mesh position={[0, 4.75, 0]}>
-        <cylinderGeometry args={[4, 4, 9.5, 32]} />
+      <mesh position={[0, cupHeight / 2, 0]}>
+        <cylinderGeometry args={[cupRadius, cupRadius, cupHeight, 32]} />
         {cupMaterial}
       </mesh>
 
       {/* 杯子把手 - 半圆环 */}
-      <mesh position={[4, 5, 0]} rotation={[0, Math.PI, Math.PI / 2]}>
-        <torusGeometry args={[4.25, 0.5, 16, 32, Math.PI]} />
+      <mesh
+        position={[handleDistance, handleHeight, 0]}
+        rotation={[0, Math.PI, Math.PI / 2]}
+      >
+        <torusGeometry
+          args={[handleRadius, handleThickness, 16, 32, Math.PI]}
+        />
         {cupMaterial}
       </mesh>
     </group>
@@ -37,7 +53,7 @@ function OpenBox({ width, height, depth, position }) {
   // 创建内外不同的材质
   const outerMaterial = (
     <meshStandardMaterial
-      color="#4a90e2"
+      color="#99ccff"
       side={2}
       metalness={0.3}
       roughness={0.4}
@@ -47,7 +63,7 @@ function OpenBox({ width, height, depth, position }) {
 
   const innerMaterial = (
     <meshStandardMaterial
-      color="#2c3e50"
+      color="#007acc"
       side={2}
       metalness={0.1}
       roughness={0.8}
@@ -242,14 +258,13 @@ function App() {
     }
 
     // 检查高度是否足够
-    const cupHeight = 9.5; // 杯子高度
+    const cupHeight = 9.5; // 从Cup组件中获取
     if (cupHeight > boxHeight) {
       setCanFit(false);
       return;
     }
 
     // 定义盒子的边界（只考虑水平方向）
-    // 由于左面和前面是基准面，所以边界从0开始
     const boxMinX = 0;
     const boxMaxX = boxWidth;
     const boxMinZ = 0;
@@ -265,8 +280,8 @@ function App() {
       );
     });
 
-    // 添加安全边距
-    const safetyMargin = 0.1; // 安全边距（厘米）
+    // 添加安全边距，即必须的空隙
+    const safetyMargin = 0;
     const hasSafetyMargin = cupPoints.every((point) => {
       return (
         point.x >= boxMinX + safetyMargin &&
@@ -278,9 +293,6 @@ function App() {
 
     // 记录当前检查时间
     const currentTime = Date.now();
-
-    // 如果距离上次检查时间太短（小于100ms），则忽略此次检查
-    // 这可以防止在快速调整时出现判断不一致的情况
     if (currentTime - lastCheckTime < 100) {
       return;
     }
@@ -335,8 +347,8 @@ function App() {
     <div className="app-container">
       <div className="toolbar">
         <div className="control-group">
-          <h3>杯子设置</h3>
-          <label>旋转角度（度）：</label>
+          <h3>杯子角度控制（度）</h3>
+          <label>旋转角度：</label>
           <input
             type="number"
             value={((cupRotation * 180) / Math.PI).toFixed(1)}
@@ -376,7 +388,7 @@ function App() {
         )}
 
         <div className="control-group">
-          <h3>盒子设置（单位：厘米）</h3>
+          <h3>盒子设置（厘米）</h3>
           <label>长度：</label>
           <input
             type="number"
@@ -384,7 +396,7 @@ function App() {
             onChange={(e) => setBoxWidth(Number(e.target.value))}
             min="1"
             max="50"
-            step="1"
+            step="0.1"
           />
           <label>宽度：</label>
           <input
@@ -393,7 +405,7 @@ function App() {
             onChange={(e) => setBoxDepth(Number(e.target.value))}
             min="1"
             max="50"
-            step="1"
+            step="0.1"
           />
           <label>高度：</label>
           <input
@@ -402,7 +414,7 @@ function App() {
             onChange={(e) => setBoxHeight(Number(e.target.value))}
             min="1"
             max="50"
-            step="1"
+            step="0.1"
           />
         </div>
 
@@ -412,7 +424,7 @@ function App() {
           </button>
           {isOverlapping && (
             <div className={`fit-status ${canFit ? "can-fit" : "cannot-fit"}`}>
-              {canFit ? "可以容纳" : "无法容纳"}
+              {canFit ? "😊 可 以 容 纳" : "😞 无 法 容 纳"}
             </div>
           )}
         </div>
@@ -422,11 +434,11 @@ function App() {
           <color attach="background" args={["#1a1a1a"]} />
 
           {/* 环境光 */}
-          <ambientLight intensity={0.3} />
+          <ambientLight intensity={0.5} />
 
           {/* 主光源 */}
           <directionalLight
-            position={[5, 5, 5]}
+            position={[5, 10, 5]}
             intensity={1}
             castShadow
             shadow-mapSize-width={1024}
